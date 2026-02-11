@@ -1,0 +1,28 @@
+name: public-content-checks
+
+on:
+  pull_request:
+    paths:
+      - "index.html"
+      - "scripts/check_public_content.py"
+      - ".github/workflows/public-content-checks.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "index.html"
+      - "scripts/check_public_content.py"
+      - ".github/workflows/public-content-checks.yml"
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate public content safety
+        run: python scripts/check_public_content.py
