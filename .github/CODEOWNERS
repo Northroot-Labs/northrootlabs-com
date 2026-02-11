@@ -1,0 +1,5 @@
+# Protect CI/CD and public surface changes
+.github/workflows/* @sweettea94
+scripts/* @sweettea94
+index.html @sweettea94
+README.md @sweettea94
