@@ -1,0 +1,68 @@
+name: toolchain-preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      strict:
+        description: "Fail if required providers are not ready"
+        required: true
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+      require_namecheap:
+        description: "Require Namecheap fallback credentials"
+        required: true
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+      require_gcloud:
+        description: "Require Google Cloud auth wiring"
+        required: true
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+
+permissions: {}
+
+concurrency:
+  group: toolchain-preflight
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+      - name: Run auth preflight
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NAMECHEAP_API_USER: ${{ secrets.NAMECHEAP_API_USER }}
+          NAMECHEAP_API_KEY: ${{ secrets.NAMECHEAP_API_KEY }}
+          NAMECHEAP_USERNAME: ${{ secrets.NAMECHEAP_USERNAME }}
+          NAMECHEAP_CLIENT_IP: ${{ secrets.NAMECHEAP_CLIENT_IP }}
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+        run: |
+          set -euo pipefail
+          REQUIRED="github cloudflare"
+          if [ "${{ inputs.require_namecheap }}" = "true" ]; then
+            REQUIRED="$REQUIRED namecheap"
+          fi
+          if [ "${{ inputs.require_gcloud }}" = "true" ]; then
+            REQUIRED="$REQUIRED gcloud"
+          fi
+          if [ "${{ inputs.strict }}" = "true" ]; then
+            python scripts/preflight_auth.py --context ci --strict --require $REQUIRED
+          else
+            python scripts/preflight_auth.py --context ci --require $REQUIRED
+          fi
